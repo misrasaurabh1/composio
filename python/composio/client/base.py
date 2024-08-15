@@ -47,7 +47,6 @@ class Collection(t.Generic[ModelType], logging.WithLogger):
                 message=response.content.decode(encoding="utf-8"),
                 status_code=response.status_code,
             )
-        return response
 
     def _raise_if_empty(self, collection: CollectionType) -> CollectionType:
         """Raise if provided colleciton is empty."""
@@ -57,23 +56,21 @@ class Collection(t.Generic[ModelType], logging.WithLogger):
 
     def get(self, queries: t.Optional[t.Dict[str, str]] = None) -> t.List[ModelType]:
         """List available models."""
-        request = self._raise_if_required(
-            response=self.client.http.get(
-                url=str(self.endpoint(queries=queries or {})),
-            ),
-        )
+        response = self.client.http.get(url=str(self.endpoint(queries=queries or {})))
+        self._raise_if_required(response)
 
-        data = request.json()
+        data = response.json()
+        list_key = getattr(self, "_list_key", None)
+
         if isinstance(data, list):
             return [self.model(**item) for item in data]
-
-        if self._list_key in data:
-            return [self.model(**item) for item in data[self._list_key]]
-
-        raise HTTPError(
-            message=f"Received invalid data object: {request.content.decode()}",
-            status_code=request.status_code,
-        )
+        elif list_key and list_key in data:
+            return [self.model(**item) for item in data[list_key]]
+        else:
+            raise HTTPError(
+                message=f"Received invalid data object: {response.content.decode()}",
+                status_code=response.status_code,
+            )
 
 
 class BaseClient:
