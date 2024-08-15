@@ -692,12 +692,12 @@ class Triggers(Collection[TriggerModel]):
         :param name: Name of the trigger
         :param connected_account_id: ID of the relevant connected account
         """
-        response = self._raise_if_required(
-            self.client.http.post(
-                url=str(self.endpoint.enable / connected_account_id / name),
-                json={"triggerConfig": config},
-            )
+        url = f"{self.endpoint.enable}/{connected_account_id}/{name}"
+        response = self.client.http.post(
+            url=url,
+            json={"triggerConfig": config},
         )
+        self._raise_if_required(response)
         return response.json()
 
     def disable(self, id: str) -> t.Dict:
