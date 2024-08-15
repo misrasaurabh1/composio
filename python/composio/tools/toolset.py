@@ -40,7 +40,6 @@ from composio.tools.env.base import (
     WorkspaceConfigType,
 )
 from composio.tools.env.factory import HostWorkspaceConfig, WorkspaceFactory
-from composio.tools.local.base import Action as LocalAction
 from composio.tools.local.handler import LocalClient
 from composio.utils.enums import get_enum_key
 from composio.utils.logging import WithLogger
@@ -500,46 +499,41 @@ class ComposioToolSet(WithLogger):
         actions: t.Optional[t.Sequence[ActionType]] = None,
         tags: t.Optional[t.Sequence[TagType]] = None,
     ) -> t.List[ActionModel]:
-        runtime_actions = t.cast(
-            t.List[t.Type[LocalAction]],
-            [action for action in actions or [] if hasattr(action, "run_on_shell")],
-        )
-        actions = t.cast(
-            t.List[Action],
-            [
-                Action(action)
-                for action in actions or []
-                if action not in runtime_actions
-            ],
-        )
-        apps = t.cast(t.List[App], [App(app) for app in apps or []])
+        actions = actions or []
+        apps = apps or []
 
-        local_actions = [action for action in actions if action.is_local]
-        local_apps = [app for app in apps if app.is_local]
+        runtime_actions = [
+            action for action in actions if hasattr(action, "run_on_shell")
+        ]
+        local_actions = [
+            Action(action)
+            for action in actions
+            if action not in runtime_actions and Action(action).is_local
+        ]
+        local_apps = [App(app) for app in apps if App(app).is_local]
+        remote_actions = [
+            Action(action)
+            for action in actions
+            if action not in runtime_actions and not Action(action).is_local
+        ]
+        remote_apps = [App(app) for app in apps if not App(app).is_local]
 
-        remote_actions = [action for action in actions if not action.is_local]
-        remote_apps = [app for app in apps if not app.is_local]
-
-        items: t.List[ActionModel] = []
-        if len(local_actions) > 0 or len(local_apps) > 0:
+        items = []
+        if local_actions or local_apps:
             items += [
                 ActionModel(**item)
                 for item in self._local_client.get_action_schemas(
-                    apps=local_apps,
-                    actions=local_actions,
-                    tags=tags,
+                    apps=local_apps, actions=local_actions, tags=tags
                 )
             ]
 
-        if len(remote_actions) > 0 or len(remote_apps) > 0:
-            remote_items = self.client.actions.get(
-                apps=remote_apps,
-                actions=remote_actions,
-                tags=tags,
+        if remote_actions or remote_apps:
+            items += self.client.actions.get(
+                apps=remote_apps, actions=remote_actions, tags=tags
             )
-            items = items + remote_items
 
         items += [ActionModel(**act().get_action_schema()) for act in runtime_actions]
+
         for item in items:
             self.check_connected_account(action=item.name)
             item = self.action_preprocessing(item)
@@ -575,20 +569,20 @@ class ComposioToolSet(WithLogger):
                 param_type = param_details["type"]
                 description = param_details.get("description", "").rstrip(".")
                 if description:
-                    param_details[
-                        "description"
-                    ] = f"{description}. Please provide a value of type {param_type}."
+                    param_details["description"] = (
+                        f"{description}. Please provide a value of type {param_type}."
+                    )
                 else:
-                    param_details[
-                        "description"
-                    ] = f"Please provide a value of type {param_type}."
+                    param_details["description"] = (
+                        f"Please provide a value of type {param_type}."
+                    )
 
             if param_name in required_params:
                 description = param_details.get("description", "")
                 if description:
-                    param_details[
-                        "description"
-                    ] = f"{description.rstrip('.')}. This parameter is required."
+                    param_details["description"] = (
+                        f"{description.rstrip('.')}. This parameter is required."
+                    )
                 else:
                     param_details["description"] = "This parameter is required."
 
@@ -666,7 +660,6 @@ class ComposioToolSet(WithLogger):
         :param tags: Optional sequence of TagType to filter the actions.
         :return: A formatted string with instructions for agents.
         """
-        # Retrieve schema information for the given apps, actions, and tags
         schema_list = [
             schema.model_dump()
             for schema in (
@@ -678,32 +671,21 @@ class ComposioToolSet(WithLogger):
             (schema_obj["appName"], schema_obj["name"]) for schema_obj in schema_list
         ]
 
-        # Helper function to format a list of items into a string
-        def format_list(items):
-            if not items:
-                return ""
-            if len(items) == 1:
-                return items[0]
-            return ", ".join(items[:-2] + [" and ".join(items[-2:])])
-
-        # Organize the schema information by app name
-        action_dict: t.Dict[str, t.List] = {}
+        action_dict: t.Dict[str, t.List[str]] = {}
         for appName, name in schema_info:
-            if appName not in action_dict:
-                action_dict[appName] = []
-            action_dict[appName].append(name)
+            action_dict.setdefault(appName, []).append(name)
 
-        # Format the schema information into a human-readable string
         formatted_schema_info = (
             "You have various tools, among which "
             + ", ".join(
                 [
-                    f"for interacting with **{appName}** you might use {format_list(action_items)} tools"
+                    f"for interacting with **{appName}** you might use {', '.join(action_items[:-1]) + ', and ' + action_items[-1] if len(action_items) > 1 else action_items[0]} tools"
                     for appName, action_items in action_dict.items()
                 ]
             )
             + ". Whichever tool is useful to execute your task, use that with proper parameters."
         )
+
         return formatted_schema_info
 
     def get_auth_schemes(self, app: AppType) -> t.List[AppAuthScheme]:
