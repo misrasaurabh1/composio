@@ -63,23 +63,18 @@ def git_clone_cmd(repo: str, commit_id: str) -> str:
     if not github_access_token and os.environ.get("ALLOW_CLONE_WITHOUT_REPO") != "true":
         raise RuntimeError("Cannot clone github repository without github access token")
 
-    clone_url = f"https://{github_access_token+'@' if github_access_token else ''}github.com/{repo}.git"
+    auth_part = f"{github_access_token}@" if github_access_token else ""
+    clone_url = f"https://{auth_part}github.com/{repo}.git"
+    base_cmd = f"git clone --depth 1 {clone_url} -q && cd {repo_name}"
 
     if commit_id:
-        commands = [
-            f"git clone --depth 1 {clone_url} -q",
-            f"cd {repo_name}",
-            f"git fetch --depth 1 origin {commit_id}",
-            f"git checkout {commit_id}",
-        ]
+        additional_cmds = (
+            f" && git fetch --depth 1 origin {commit_id} && git checkout {commit_id}"
+        )
     else:
-        commands = [
-            f"git clone --depth 1 {clone_url} -q",
-            f"cd {repo_name}",
-        ]
+        additional_cmds = ""
 
-    commands.append("git status")
-    return " && ".join(commands)
+    return f"{base_cmd}{additional_cmds} && git status"
 
 
 class GitClone(BaseFileAction):
