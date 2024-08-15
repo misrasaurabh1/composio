@@ -208,16 +208,15 @@ class Browser(WithLogger):  # pylint: disable=too-many-public-methods
     def find_element(self, selector: str, selector_type: str = "css") -> t.Any:
         """
         Find an element on the page.
-
         :param selector: Selector for the element.
         :param selector_type: Type of selector (CSS, XPATH, ID, NAME, TAG, CLASS). Defaults to "css".
         :return: The found element.
         """
         page = self._ensure_page_initialized()
+        selector_func = selector_map.get(selector_type.lower())
+        if not selector_func:
+            raise ValueError(f"Unsupported selector type: {selector_type}")
         try:
-            selector_func = selector_map.get(selector_type.lower())
-            if not selector_func:
-                raise ValueError(f"Unsupported selector type: {selector_type}")
             return page.query_selector(selector_func(selector))
         except Exception as e:
             raise BrowserError(
@@ -434,15 +433,12 @@ class Browser(WithLogger):  # pylint: disable=too-many-public-methods
     ) -> t.Optional[str]:
         """
         Get the text content of a specific element.
-
         :param selector: Selector to find the element.
         :param selector_type: Type of selector (default is "css").
         :return: Text content of the element or None if not found.
         """
         element = self.find_element(selector, selector_type)
-        if element:
-            return element.inner_text()
-        return None
+        return element.inner_text() if element else None
 
     def get_page_details(
         self,
