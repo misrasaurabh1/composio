@@ -208,16 +208,13 @@ class Browser(WithLogger):  # pylint: disable=too-many-public-methods
     def find_element(self, selector: str, selector_type: str = "css") -> t.Any:
         """
         Find an element on the page.
-
         :param selector: Selector for the element.
         :param selector_type: Type of selector (CSS, XPATH, ID, NAME, TAG, CLASS). Defaults to "css".
         :return: The found element.
         """
         page = self._ensure_page_initialized()
         try:
-            selector_func = selector_map.get(selector_type.lower())
-            if not selector_func:
-                raise ValueError(f"Unsupported selector type: {selector_type}")
+            selector_func = self._ensure_selector_function(selector_type)
             return page.query_selector(selector_func(selector))
         except Exception as e:
             raise BrowserError(
@@ -418,16 +415,18 @@ class Browser(WithLogger):  # pylint: disable=too-many-public-methods
     ) -> t.Optional[str]:
         """
         Get the value of an attribute for a specific element.
-
         :param selector: Selector to find the element.
         :param attribute: Name of the attribute to get.
         :param selector_type: Type of selector (default is "css").
         :return: Value of the attribute or None if not found.
         """
-        element = self.find_element(selector, selector_type)
-        if element:
-            return element.get_attribute(attribute)
-        return None
+        try:
+            element = self.find_element(selector, selector_type)
+            return element.get_attribute(attribute) if element else None
+        except Exception as e:
+            raise BrowserError(
+                f"Failed to get attribute '{attribute}' from selector '{selector}': {str(e)}"
+            ) from e
 
     def get_element_text(
         self, selector: str, selector_type: str = "css"
@@ -480,3 +479,9 @@ class Browser(WithLogger):  # pylint: disable=too-many-public-methods
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
         self.cleanup()
+
+    def _ensure_selector_function(self, selector_type: str):
+        selector_func = selector_map.get(selector_type.lower())
+        if not selector_func:
+            raise ValueError(f"Unsupported selector type: {selector_type}")
+        return selector_func
