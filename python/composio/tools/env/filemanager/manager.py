@@ -304,25 +304,30 @@ class FileManager(WithLogger):
         depth: int,
         exclude: t.List[Path],
     ) -> str:
-        """Auxialiary method for creating working directory tree recursively."""
+        """Auxiliary method for creating working directory tree recursively."""
         if (depth != -1 and level > depth) or directory in exclude:
             return ""
 
-        tree = ""
-        for child in directory.iterdir():
-            if child.is_file():
-                tree += ("  |" * level) + "__ " + child.name + "\n"
+        subdirs = []
+        files = []
 
         for child in directory.iterdir():
             if child.is_file():
-                continue
-            tree += ("  |" * level) + "__ " + child.name + "\n"
-            tree += self._tree(
-                directory=child,
-                level=level + 1,
-                depth=depth,
-                exclude=exclude,
+                files.append(child)
+            else:
+                subdirs.append(child)
+
+        tree = "".join(("  |" * level) + "__ " + file.name + "\n" for file in files)
+        tree += "".join(
+            (
+                ("  |" * level)
+                + "__ "
+                + subdir.name
+                + "\n"
+                + self._tree(subdir, level + 1, depth, exclude)
             )
+            for subdir in subdirs
+        )
         return tree
 
     def tree(
@@ -336,11 +341,14 @@ class FileManager(WithLogger):
         :param depth: Max depth for the tree
         :param exclude: Exclude directories from the tree
         """
+        exclude_paths = set(map(lambda x: Path(x).resolve(), exclude or []))
+        exclude_paths.add(Path(".git").resolve())
+
         return self._tree(
             directory=self.working_dir,
             level=0,
             depth=depth or -1,
-            exclude=list(map(Path, exclude or [])) + [Path(".git").resolve()],
+            exclude=exclude_paths,
         )
 
     def ls(self) -> t.List[t.Tuple[str, str]]:
