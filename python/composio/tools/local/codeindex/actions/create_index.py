@@ -140,7 +140,7 @@ class CreateIndex(Action[CreateCodeIndexInput, CreateCodeIndexOutput]):
         return openai_key, api_base, helicone_auth
 
     def _get_collection_name(self, repo_path: str) -> str:
-        return Path(repo_path).name
+        return repo_path.rstrip("/").rsplit("/", 1)[-1]
 
     def _create_index_storage_path(self, index_storage_path: Path) -> None:
         index_storage_path.mkdir(parents=True, exist_ok=True)
