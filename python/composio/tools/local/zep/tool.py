@@ -28,4 +28,9 @@ class ZepTool(Tool):
 
     def triggers(self) -> list:
         """Get zep triggers."""
+        return ZepTool._empty_list()
+
+    @staticmethod
+    def _empty_list():
+        """Returns an empty list."""
         return []
