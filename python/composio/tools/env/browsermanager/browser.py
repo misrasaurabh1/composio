@@ -146,15 +146,11 @@ class Browser(WithLogger):  # pylint: disable=too-many-public-methods
 
     def get_page_viewport(self) -> t.Dict[str, int]:
         """Get the viewport of the current page."""
-        try:
-            page = self._ensure_page_initialized()
-            viewport = page.viewport_size
-            if viewport:
-                return viewport  # type: ignore
-            raise BrowserError("Failed to get page viewport")
-        except BrowserError as e:
-            self.logger.error(f"Failed to get page viewport: {str(e)}")
-            raise
+        page = self._ensure_page_initialized()
+        viewport = page.viewport_size
+        if viewport:
+            return viewport  # type: ignore
+        raise BrowserError("Failed to get page viewport")
 
     def back(self) -> None:
         """Navigate back in browser history."""
