@@ -20,8 +20,10 @@ def set_current_browser_manager(manager: t.Optional["BrowserManager"]) -> None:
 
 def get_current_browser_manager() -> t.Optional["BrowserManager"]:
     """Get active browser manager."""
-    with _manager_lock:
-        return _active_manager
+    if _manager_lock.locked():
+        with _manager_lock:
+            return _active_manager
+    return _active_manager
 
 
 class BrowserManager(WithLogger):
