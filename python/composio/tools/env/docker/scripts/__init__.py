@@ -101,43 +101,34 @@ SHELL_SCRIPTS = (PATH / "commands" / "_split_string.py",)
 
 def get_shell_env() -> ShellEnvironment:
     """Get shell environment for running SWE agent."""
-    formatted = []
-    for file in (*SHELL_SOURCE_FILES, *SHELL_SCRIPTS):
-        contents = file.read_text(encoding="utf-8")
-        if contents.strip().startswith("#!"):
-            name, *_ = Path(file).name.rsplit(".", 1)
-            formatted.append(
-                CommandFile(
-                    datum=contents,
-                    cmd_type="script",
-                    name=name,
-                )
-            )
-            continue
-
-        if file.name.endswith(".sh"):
-            filetype = "source_file"
-        elif file.name.startswith("_"):
-            filetype = "utility"
-        else:
-            raise ValueError(
-                (
-                    f"Non-shell script file {file} does not start with "
-                    "shebang.\nEither add a shebang (#!) or change the "
-                    "file extension to .sh if you want to source it.\n"
-                    "You can override this behavior by adding an underscore "
-                    "to the file name (e.g. _utils.py)."
-                )
-            )
-        formatted.append(
-            CommandFile(
-                datum=contents,
-                cmd_type=filetype,
-                name=file.name,
-            )
-        )
+    formatted = [
+        create_command_file(file) for file in SHELL_SOURCE_FILES + SHELL_SCRIPTS
+    ]
     return ShellEnvironment(
         copy_file_to_workspace=formatted,
         commands_to_execute=SHELL_INITIAL_COMMANDS,
         setup_cmd=SHELL_STATE_CMD,
     )
+
+
+def create_command_file(file: Path) -> CommandFile:
+    contents = file.read_text(encoding="utf-8")
+    name, filetype = determine_file_type_and_name(file, contents)
+    return CommandFile(datum=contents, cmd_type=filetype, name=name)
+
+
+def determine_file_type_and_name(file: Path, contents: str) -> t.Tuple[str, str]:
+    if contents.strip().startswith("#!"):
+        name = file.stem
+        filetype = "script"
+    elif file.suffix == ".sh":
+        name, filetype = file.name, "source_file"
+    elif file.name.startswith("_"):
+        name, filetype = file.name, "utility"
+    else:
+        raise ValueError(
+            f"Non-shell script file {file} does not start with shebang.\n"
+            "Either add a shebang (#!) or change the file extension to .sh if you want to source it.\n"
+            "You can override this behavior by adding an underscore to the file name (e.g. _utils.py)."
+        )
+    return name, filetype
