@@ -43,14 +43,13 @@ class GitCloneResponse(BaseFileResponse):
 
 def git_reset_cmd(commit_id: str) -> str:
     """Commands to reset git repository state."""
-    reset_commands = [
-        "git remote get-url origin",
-        f"git fetch --depth 1 origin {commit_id}",
-        f"git reset --hard {commit_id}",
-        "git clean -fdx",
-        "git status",
-    ]
-    return " && ".join(reset_commands)
+    return (
+        "git remote get-url origin"
+        f" && git fetch --depth 1 origin {commit_id}"
+        f" && git reset --hard {commit_id}"
+        " && git clean -fdx"
+        " && git status"
+    )
 
 
 def git_clone_cmd(repo: str, commit_id: str) -> str:
