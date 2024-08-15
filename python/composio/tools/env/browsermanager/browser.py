@@ -449,12 +449,11 @@ class Browser(WithLogger):  # pylint: disable=too-many-public-methods
     ) -> t.Dict[str, t.Any]:
         """Get the details of the current page."""
         page = self._ensure_page_initialized()
-        details = {
+        return {
             "url": page.url,
             "title": page.title(),
             "page_details": page.accessibility.snapshot(),
         }
-        return details
 
     def __str__(self) -> str:
         """String representation."""
