@@ -704,15 +704,12 @@ class Triggers(Collection[TriggerModel]):
         """
         Disable a trigger
 
-        :param name: Name of the trigger
-        :param connected_account_id: ID of the relevant connected account
+        :param id: ID of the trigger
         """
         response = self._raise_if_required(
             self.client.http.patch(
-                url=str(self.endpoint / "instance" / id / "status"),
-                json={
-                    "enabled": False,
-                },
+                url=f"{self.endpoint}/instance/{id}/status",  # Use f-string for better performance
+                json={"enabled": False},
             )
         )
         return response.json()
