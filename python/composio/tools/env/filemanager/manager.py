@@ -345,12 +345,13 @@ class FileManager(WithLogger):
 
     def ls(self) -> t.List[t.Tuple[str, str]]:
         """List contents of the current directory with their types."""
+        working_dir = self.working_dir
         return [
             (
-                str(path.relative_to(self.working_dir)),
+                str(path.relative_to(working_dir)),
                 "dir" if path.is_dir() else "file",
             )
-            for path in self.working_dir.iterdir()
+            for path in working_dir.iterdir()
         ]
 
     def current_dir(self) -> str:
