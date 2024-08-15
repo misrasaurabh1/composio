@@ -106,26 +106,31 @@ def _parse_annotated_type(
     argument: str, annotation: t.Type
 ) -> t.Tuple[t.Type, str, t.Any]:
     """Parse for raw type."""
-    annottype, *annotspec = t.get_args(annotation)
-    if len(annotspec) == 1 and isinstance(annotspec[0], ArgSpec):
-        description = annotspec[0].description
-        default = annotspec[0].default
-    elif len(annotspec) == 1 and isinstance(annotspec[0], str):
-        description = annotspec[0]
-        default = None
-    elif len(annotspec) == 2 and isinstance(annotspec[0], str):
-        description = annotspec[0]
-        default = annotspec[1]
-    else:
-        raise ValueError(
-            f"Invalid type annotation for argument {argument}: {annotation}"
-        )
-    return annottype, description, default
+    annots = t.get_args(annotation)
+    annottype = annots[0]
+    annotspec = annots[1:]
+
+    if len(annotspec) == 1:
+        spec = annotspec[0]
+        if isinstance(spec, ArgSpec):
+            return annottype, spec.description, spec.default
+        elif isinstance(spec, str):
+            return annottype, spec, None
+    elif len(annotspec) == 2:
+        description, default = annotspec
+        if isinstance(description, str):
+            return annottype, description, default
+
+    raise ValueError(f"Invalid type annotation for argument {argument}: {annotation}")
 
 
 def _parse_docstring(
     docstr: str,
-) -> t.Tuple[str, t.Dict[str, str], t.Optional[t.Tuple[str, str]],]:
+) -> t.Tuple[
+    str,
+    t.Dict[str, str],
+    t.Optional[t.Tuple[str, str]],
+]:
     """Parse docstring for descriptions."""
     header, *descriptions = docstr.lstrip().rstrip().split("\n")
     params = {}
@@ -147,7 +152,12 @@ def _parse_docstring(
 
 def _build_executable_from_args(
     f: t.Callable,
-) -> t.Tuple[t.Callable, t.Type[BaseModel], t.Type[BaseModel], bool,]:
+) -> t.Tuple[
+    t.Callable,
+    t.Type[BaseModel],
+    t.Type[BaseModel],
+    bool,
+]:
     """Build execute action from function arguments."""
     argspec = inspect.getfullargspec(f)
     defaults = dict(
@@ -226,9 +236,12 @@ def _build_executable_from_args(
     )
 
 
-def _parse_schemas(
-    f: t.Callable, runs_on_shell: bool
-) -> t.Tuple[t.Callable, t.Type[BaseModel], t.Type[BaseModel], bool,]:
+def _parse_schemas(f: t.Callable, runs_on_shell: bool) -> t.Tuple[
+    t.Callable,
+    t.Type[BaseModel],
+    t.Type[BaseModel],
+    bool,
+]:
     """Parse action callable schemas."""
     argspec = inspect.getfullargspec(f)
     if _is_simple_action(argspec=argspec):
