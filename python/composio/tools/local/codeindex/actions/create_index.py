@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 
 from composio.tools.local.base import Action
 
-
 # Constants
 MAX_WINDOW_SIZE = 200
 IDEAL_WINDOW_SIZE = 80
@@ -150,9 +149,8 @@ class CreateIndex(Action[CreateCodeIndexInput, CreateCodeIndexOutput]):
         embedding_type: str,
     ):
         from chromadb.utils import embedding_functions  # pylint: disable=C0415
-        from chromadb.utils.embedding_functions import (  # pylint: disable=C0415
-            OpenAIEmbeddingFunction,
-        )
+        from chromadb.utils.embedding_functions import \
+            OpenAIEmbeddingFunction  # pylint: disable=C0415
 
         if embedding_type == "remote":
             openai_key, api_base, helicone_auth = self._get_openai_credentials()
