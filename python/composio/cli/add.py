@@ -263,8 +263,7 @@ def _get_auth_config(
     scopes: t.Optional[t.Tuple[str, ...]] = None
 ) -> t.Optional[t.Dict]:
     """Get auth config."""
-    scopes = scopes or ()
-    if len(scopes) == 0:
+    if not scopes:
         return None
 
     return {
