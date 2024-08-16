@@ -105,4 +105,4 @@ class WithLogger:
     @property
     def logger(self) -> logging.Logger:
         """Get the component logger."""
-        return self._logger
+        return t.cast(logging.Logger, self._logger)
