@@ -188,14 +188,10 @@ class SSHShell(Shell):
 
     def _send(self, buffer: str, stdin: t.Optional[str] = None) -> None:
         """Send buffer to shell."""
-        if stdin is None:
-            self.channel.sendall(f"{buffer}\n".encode("utf-8"))
-            time.sleep(0.05)
-            return
-
-        self.channel.send(f"{buffer}\n".encode("utf-8"))
-        self.channel.sendall(f"{stdin}\n".encode("utf-8"))
-        time.sleep(0.05)
+        data = f"{buffer}\n".encode("utf-8")
+        if stdin is not None:
+            data += f"{stdin}\n".encode("utf-8")
+        self.channel.sendall(data)
 
     def _read(self) -> str:
         """Read buffer from shell."""
