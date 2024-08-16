@@ -100,6 +100,6 @@ class FormatAndLintCodebase(Action[CodeFormatRequest, CodeFormatResponse]):
                 text=True,
                 check=True,
             )
-            return result.stdout.splitlines()
+            return result.stdout.rstrip().split("\n")
         except subprocess.CalledProcessError as e:
             return [f"Error running ruff {command}: {e.stderr}"]
