@@ -199,12 +199,21 @@ class SSHShell(Shell):
 
     def _read(self) -> str:
         """Read buffer from shell."""
-        output = b""
-        while self.channel.recv_ready():
-            output += self.channel.recv(512)
-        while self.channel.recv_stderr_ready():
-            output += self.channel.recv_stderr(512)
-        return _ANSI_ESCAPE.sub(b"", output).decode(encoding="utf-8")
+        output = bytearray()
+        recv = self.channel.recv
+        recv_ready = self.channel.recv_ready
+        recv_stderr = self.channel.recv_stderr
+        recv_stderr_ready = self.channel.recv_stderr_ready
+        _ANSI_ESCAPE_sub = _ANSI_ESCAPE.sub
+
+        while recv_ready():
+            output.extend(recv(2048))  # Use a larger buffer size
+
+        if recv_stderr_ready():
+            output.extend(recv_stderr(2048))  # Use a larger buffer size
+
+        decoded_output = output.decode(encoding="utf-8")
+        return _ANSI_ESCAPE_sub(b"", decoded_output.encode("utf-8")).decode("utf-8")
 
     def _wait(self, cmd: str) -> None:
         """Wait for the command to execute."""
